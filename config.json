@@ -1,0 +1,5 @@
+{
+    "json_file": "Googleスプレッドシートのoauth.jsonのパス",
+    "doc_id": "Googleスプレッドシートのid",
+    "client_id": "doscordのbotのid"
+}
