@@ -5,6 +5,16 @@ import discord
 import numpy as np
 from parse import parse
 import json
+import unicodedata
+
+def get_east_asian_width_count(text):
+    count = 0
+    for c in text:
+        if unicodedata.east_asian_width(c) in 'FWA':
+            count += 2
+        else:
+            count += 1
+    return count
 
 def load_config():
     with open('config.json') as f:
@@ -214,7 +224,7 @@ def simple_dice(input_msg):
         dice_info = msg.split('d')
         dice_num = int(dice_info[0])
         dice_size = int(dice_info[1])
-        return int(opt+str(dice(dice_num, dice_size)[0]))
+        return np.array([int(opt+str(d)) for d in dice(dice_num, dice_size)])
 
     secret = None
     top_secret = None
@@ -296,14 +306,39 @@ def simple_dice(input_msg):
     else:
         top_secret = ''
 
-    return '【ダイス】{top_secret}({secret}{ability}{secret}):{inequality} {dice_result}={dice_array} {result_msg}{top_secret}'.format(
-        top_secret = top_secret,
+    return_msg = '【ダイス】({secret}{ability}{secret}):{inequality} {dice_result}={dice_array} {result_msg}'.format(
         secret = secret,
         ability = ability,
         inequality = inequality,
         dice_result = np.sum(dice_array),
         dice_array = dice_array,
         result_msg = result_msg)
+
+    dummy_blank = ''
+    if '【' in result_msg:
+        count_len = 70
+    else:
+        if 'Fail' in return_msg:
+            count_len = 92
+        else:
+            count_len = 84
+
+
+    while get_east_asian_width_count(return_msg+dummy_blank) < count_len:
+        dummy_blank += ' '
+
+    print(return_msg+dummy_blank)
+    print(get_east_asian_width_count(return_msg+dummy_blank))
+
+    return '【ダイス】{top_secret}({secret}{ability}{secret}):{inequality} {dice_result}={dice_array} {result_msg}{dummy_blank}{top_secret}'.format(
+        top_secret = top_secret,
+        secret = secret,
+        ability = ability,
+        inequality = inequality,
+        dice_result = np.sum(dice_array),
+        dice_array = dice_array,
+        result_msg = result_msg,
+        dummy_blank = dummy_blank)
 
 def result_message(dice_size, dice_array, result=None, charactor=None, ability_name=None):
     if result:
@@ -335,7 +370,7 @@ def dice_message(input_msg, message):
         return charactor_make()
     elif 'VS' in message.content:
         return against(input_msg)
-    elif len(input_msg) == 1: #技能値判定無しのダイス
+    elif 'dice' in message.content: #技能値判定無しのダイス
         return simple_dice(input_msg)
     else:
         charactor = get_charactor(str(message.author))
@@ -422,7 +457,6 @@ async def on_message(message):
             m = message.author.name + '\n'
             m += dice_message(input_msg, message)
         # メッセージが送られてきたチャンネルへメッセージを送ります
-            #await message.channel.send(m) # discord.py ver1.0
             await client.send_message(message.channel, m) # discord.py ver0.16
 
 client.run(client_id)
