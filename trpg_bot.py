@@ -6,6 +6,7 @@ import numpy as np
 from parse import parse
 import json
 import unicodedata
+import argparse
 
 def get_east_asian_width_count(text):
     count = 0
@@ -16,8 +17,8 @@ def get_east_asian_width_count(text):
             count += 1
     return count
 
-def load_config():
-    with open('config.json') as f:
+def load_config(filepath):
+    with open(filepath) as f:
         conf = json.load(f)
     return conf
 
@@ -219,6 +220,31 @@ def charactor_make():
         msg += '{k} {v} \n'.format(k=k, v=v)
     return msg
 
+def charactor_introduce(message):
+    charactor = get_charactor(str(message.author))
+    status = {}
+    status['キャラクター名'] = charactor['NAME']['value']
+    status['STR'] = charactor['STR']['value']
+    status['CON'] = charactor['CON']['value']
+    status['POW'] = charactor['POW']['value']
+    status['DEX'] = charactor['DEX']['value']
+    status['APP'] = charactor['APP']['value']
+    status['SIZ'] = charactor['SIZ']['value']
+    status['INT'] = charactor['INT']['value']
+    status['EDU'] = charactor['EDU']['value']
+    status['HP'] = charactor['HP']['value']
+    status['MP'] = charactor['MP']['value']
+    status['SAN'] = charactor['SAN']['value']
+    status['アイデア'] = charactor['アイデア']['value']
+    status['幸運'] = charactor['幸運']['value']
+    status['知識'] = charactor['知識']['value']
+    status['db'] = charactor['db']['value']
+
+    msg = ''
+    for k, v in zip(status.keys(), status.values()):
+        msg += '{k}: {v} \n'.format(k=k, v=v)
+    return msg
+
 def simple_dice(input_msg):
     def single_dice(msg, opt):
         dice_info = msg.split('d')
@@ -314,6 +340,7 @@ def simple_dice(input_msg):
         dice_array = dice_array,
         result_msg = result_msg)
 
+    # top_secretを使った時の文字幅調整
     dummy_blank = ''
     if '【' in result_msg:
         count_len = 70
@@ -372,6 +399,10 @@ def dice_message(input_msg, message):
         return against(input_msg)
     elif 'dice' in message.content: #技能値判定無しのダイス
         return simple_dice(input_msg)
+    elif 'ci' in input_msg:
+        return charactor_introduce(message)
+    elif 'help' in input_msg:
+        return help()
     else:
         charactor = get_charactor(str(message.author))
 
@@ -424,6 +455,18 @@ def calc_ability(input_msg, charactor):
 
     return ability_name, int(ability), (charactor[ability_name]['value'], operator, correction)
 
+def help():
+    msg = '【使い方】\n'\
+    '**ダイスロール**: `/dice [ダイスの数]d[出目の最大値]`\n'\
+    '**技能判定**: `/[技能名]`\n'\
+    '**技能判定(ダイスサイズ指定or達成値指定)**: `dice [ダイスの数]d[出目の最大値] [技能名 or 達成値]`\n'\
+    '**対抗ロール**: `VS [対抗する側]/[対抗される側]`\n'\
+    '**一時的狂気**: `/一時的狂気`\n'\
+    '**不定の狂気**: `/不定の狂気`\n'\
+    '**キャラメイク**: `/cm`\n'\
+    '**キャラ紹介**: `/ci`\n'
+    return msg
+
 def bot_startswitch(message):
     # 開始ワード
     if message.content.startswith('/dice'):
@@ -438,9 +481,25 @@ def bot_startswitch(message):
     else:
         return None
 
-conf = load_config()
+def playmp3(voice, filepath):
+    voice.play(discord.FFmpegPCMAudio(filepath), after=lambda e: print('play error:', e))
+
+parser = argparse.ArgumentParser(description='')
+
+parser.add_argument('-m', '--mode', help='run mode option', default='release', choices=['debug', 'release'])
+
+args = parser.parse_args()
+
+filepath = {
+    'debug': 'config_test.json',
+    'release': 'config.json'
+}
+
+conf = load_config(filepath[args.mode])
 client = discord.Client()
 client_id = conf['client_id']
+
+voice = None
 
 @client.event
 async def on_ready():
@@ -449,14 +508,19 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    global voice
     # 送り主がBotじゃないか
     if client.user != message.author:
+        if voice is None:
+            channel = message.author.voice.channel
+            voice = await channel.connect()
         # 開始ワード
         input_msg = bot_startswitch(message).fixed
         if input_msg is not None:
-            m = message.author.name + '\n'
+            m = 'PL:' + message.author.name + '\n'
             m += dice_message(input_msg, message)
         # メッセージが送られてきたチャンネルへメッセージを送ります
+            playmp3(voice, 'dice.mp3')
             await message.channel.send(m) # discord.py ver1.0
             #await client.send_message(message.channel, m) # discord.py ver0.16
 
