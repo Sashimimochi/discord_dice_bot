@@ -481,12 +481,21 @@ def bot_startswitch(message):
     else:
         return None
 
-def playmp3(voice, filepath):
-    voice.play(discord.FFmpegPCMAudio(filepath), after=lambda e: print('play error:', e))
+def playmp3():
+    global voice
+    global music_list
+    filepath = music_list.pop()
+    if filepath:
+        voice.play(discord.FFmpegPCMAudio(filepath), after=lambda e: after_play(e))
+
+def after_play(e):
+    print("error:", e)
+    playmp3()
 
 parser = argparse.ArgumentParser(description='')
 
 parser.add_argument('-m', '--mode', help='run mode option', default='release', choices=['debug', 'release'])
+parser.add_argument('-s', '--sound', help='sound option', default=False, type=bool)
 
 args = parser.parse_args()
 
@@ -500,6 +509,7 @@ client = discord.Client()
 client_id = conf['client_id']
 
 voice = None
+music_list = []
 
 @client.event
 async def on_ready():
@@ -509,18 +519,29 @@ async def on_ready():
 @client.event
 async def on_message(message):
     global voice
+    global music_list
     # 送り主がBotじゃないか
     if client.user != message.author:
-        if voice is None:
-            channel = message.author.voice.channel
-            voice = await channel.connect()
+        if voice is None and args.sound:
+            try:
+                channel = message.author.voice.channel
+                voice = await channel.connect()
+            except AttributeError as e:
+                print(e)
+                await message.channel.send('[ERROR]ボイスモードがオンになっています。適当なボイスチャンネルにログインしてください')
+        if message.content == 'bye':
+            await message.channel.send('[INFO]了解です。ダイスボットはログアウトします')
+            await client.logout()
         # 開始ワード
         input_msg = bot_startswitch(message).fixed
         if input_msg is not None:
             m = 'PL:' + message.author.name + '\n'
             m += dice_message(input_msg, message)
         # メッセージが送られてきたチャンネルへメッセージを送ります
-            playmp3(voice, 'dice.mp3')
+            music_list.append('dice.mp3')
+            if args.sound:
+                if not voice.is_playing():
+                    playmp3()
             await message.channel.send(m) # discord.py ver1.0
             #await client.send_message(message.channel, m) # discord.py ver0.16
 

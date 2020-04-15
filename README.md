@@ -1,8 +1,9 @@
 # TRPG dice bot on discord
-ver.3
+ver.3.1
 
 ## 導入方法
 
+1. `pip install -r requirements.txt`で必要なライブラリをインストールする
 1. Googleスプレッドシートでキャラシートを作成する
 1. [Google Developers Console](https://console.developers.google.com/)でプロジェクトを作る
 1. Google Sheets APIを有効化する
@@ -18,6 +19,14 @@ ver.3
 }
 ```
 1. trpg_bot.pyを実行する
+
+※サウンドモードを使用する場合は別途`ffmpeg`のインストールが必要です。
+以下に参考文献を載せましたので、必要に応じてご参照ください。
+また、音源となる`dice.mp3`もご自身でご用意ください。音源は`trpg_bot.py`と同じディレクトリに置いてください。
+
+- [MusicBot](https://github.com/Just-Some-Bots/MusicBot)
+- [DiscordBotでyoutubeの音声をボイスチャットに流す｜あかネス｜note](https://note.mu/akaness_note/n/nc466d2a00ead)
+
 
 ## 使い方
 お使いのdiscord.pyのバージョンに合わせてご利用ください。
@@ -35,11 +44,16 @@ ver.3
 |**不定の狂気**|`/不定の狂気`|
 |**キャラメイク**|`/cm`|
 |**キャラ紹介**|`/ci`|
+|**ボットのログアウト**|`bye`|
 |**ヘルプ**|`/help`|
 
 ## リリースノート
+### ver.3.1
+- ボットのログアウト機能の追加
+- 軽微なバグの修正
+
 ### ver.3
-- ダイス音の追加
+- サウンドモード(ダイス音)の追加
 - キャラ紹介コマンドの追加
 - ヘルプの追加
 
